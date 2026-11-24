@@ -11,8 +11,8 @@ C = A × B bajo el presupuesto Costo = Nnúcleos × (Wissue/2 + VL/128) ≤ 32.
 | Integrante | Responsabilidades |
 |---|---|
 | Alejandro Bejarano Rodríguez | Scripts de automatización, E2 Superescalar, E4 Multiprocesador |
-| Yohel Alas Gómez | Benchmarks, E3 Vectorial, coordinación E6 |
-| Julio Quesada Hernández | Entorno gem5 / Docker, E5 Coherencia |
+| Yohel Alas Gómez | Entorno gem5/Docker, E3 Vectorial, E6 Integración |
+| Julio Quesada Hernández | Benchmarks, E1 Línea base, E5 Coherencia |
 
 E1 y E6 se hacen entre todos.
 
