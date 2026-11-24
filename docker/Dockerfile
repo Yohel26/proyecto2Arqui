@@ -3,7 +3,7 @@
 FROM ubuntu:24.04
 
 ARG GEM5_VERSION=v26.0.0.0
-ARG JOBS=4
+ARG JOBS=2
 ARG DEBIAN_FRONTEND=noninteractive
 
 # 1. Dependencias de gem5 + compilador cruzado + Python para análisis

@@ -29,8 +29,24 @@ E1 y E6 se hacen entre todos.
 | Componente | Versión |
 |---|---|
 | gem5 | v26.0.0.0 (commit fed0e07e930fecf1e73dce94dd44e69a5bf70c46) |
-| Compilador cruzado | aarch64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0 |
+| Compilador cruzado | aarch64-linux-gnu-gcc 13.3.0 (Ubuntu 13.3.0-6ubuntu2~24.04.1) |
 | Sistema base | Ubuntu 24.04 (contenedor Docker) |
+
+### Usar el entorno
+
+    docker pull yohel0926/gem5-gemm:v26-slim
+    docker run --rm -it -v "$PWD":/work yohel0926/gem5-gemm:v26-slim bash
+
+Digest de la imagen usada en el proyecto:
+`sha256:7a93182bf1f8dd0b0d4a8d844e2177cbe9197d4e53db83c7e306d2d69b015379`
+
+### Reconstruir la imagen desde cero (2–3 h)
+
+    docker build -t gem5-gemm:v26 docker/
+    docker build -f docker/Dockerfile.slim -t gem5-gemm:v26-slim docker/
+    
+La imagen slim se genera a partir de la completa, así que se construyen en ese orden.
+La compilación usa 2 procesos en paralelo (`JOBS=2`) para no agotar la RAM; se puede cambiar con `--build-arg JOBS=n`.
 
 ## Reproducción
 

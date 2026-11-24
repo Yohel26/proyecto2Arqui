@@ -1,0 +1,23 @@
+# Imagen liviana: toma de gem5-gemm:v26 solo lo necesario para correr (sin archivos .o).
+# Requiere haber construido antes la imagen completa con docker/Dockerfile.
+FROM gem5-gemm:v26 AS full
+
+FROM ubuntu:24.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Mismas bibliotecas que la imagen completa (gem5.opt las enlaza dinámicamente)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential git make python3-dev pkg-config \
+        libprotobuf-dev libgoogle-perftools-dev libhdf5-dev libpng-dev zlib1g-dev \
+        gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+        python3-pandas python3-matplotlib ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=full /opt/gem5/build/ARM_MESI/gem5.opt  /opt/gem5/build/ARM_MESI/gem5.opt
+COPY --from=full /opt/gem5/build/ARM_MOESI/gem5.opt /opt/gem5/build/ARM_MOESI/gem5.opt
+COPY --from=full /opt/gem5/configs                  /opt/gem5/configs
+COPY --from=full /opt/gem5/include                  /opt/gem5/include
+COPY --from=full /opt/gem5/util/m5/build/arm64/out  /opt/gem5/util/m5/build/arm64/out
+
+ENV GEM5_ROOT=/opt/gem5
+WORKDIR /work
