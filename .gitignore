@@ -1,0 +1,32 @@
+# Binarios
+src/hola
+src/gemm_scalar
+src/gemm_sve
+src/gemm_omp
+src/gemm_omp_sve
+src/false_sharing
+*.o
+*.a
+
+# Salidas de gem5 
+m5out/
+# Diagramas y volcados que no se usan en el análisis
+results/**/*.dot
+results/**/*.svg
+results/**/*.pdf
+results/**/config.json
+
+report/**/*.aux
+report/**/*.log
+report/**/*.out
+report/**/*.synctex.gz
+report/**/*.bbl
+report/**/*.blg
+
+# Python
+__pycache__/
+.venv/
+.vscode/
+.DS_Store 
+
+
