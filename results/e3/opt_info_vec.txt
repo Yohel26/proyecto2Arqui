@@ -1,0 +1,2 @@
+src/gemm_common.h:131:26: optimized: loop vectorized using variable length vectors
+src/gemm_common.h:131:26: optimized: loop vectorized using variable length vectors

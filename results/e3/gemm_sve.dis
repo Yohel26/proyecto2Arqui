@@ -1,0 +1,37 @@
+0000000000400b70 <gemm_sve>:
+  400b70:	mov	x9, x1
+  400b74:	mov	x1, x2
+  400b78:	mov	x2, x3
+  400b7c:	cbz	x3, 400bfc <gemm_sve+0x8c>
+  400b80:	mov	x6, x0
+  400b84:	lsl	x7, x3, #2
+  400b88:	mov	x8, #0x0                   	// #0
+  400b8c:	cntw	x4
+  400b90:	mov	x3, x9
+  400b94:	mov	x5, #0x0                   	// #0
+  400b98:	mov	x0, #0x0                   	// #0
+  400b9c:	ldr	s2, [x6, x5, lsl #2]
+  400ba0:	mov	z2.s, s2
+  400ba4:	nop
+  400ba8:	whilelo	p0.s, x0, x2
+  400bac:	ld1w	{z1.s}, p0/z, [x3, x0, lsl #2]
+  400bb0:	ld1w	{z0.s}, p0/z, [x1, x0, lsl #2]
+  400bb4:	fmla	z0.s, p0/m, z1.s, z2.s
+  400bb8:	st1w	{z0.s}, p0, [x1, x0, lsl #2]
+  400bbc:	add	x0, x0, x4
+  400bc0:	cmp	x2, x0
+  400bc4:	b.hi	400ba8 <gemm_sve+0x38>  // b.pmore
+  400bc8:	add	x0, x5, #0x1
+  400bcc:	add	x3, x3, x7
+  400bd0:	cmp	x2, x0
+  400bd4:	b.eq	400be0 <gemm_sve+0x70>  // b.none
+  400bd8:	mov	x5, x0
+  400bdc:	b	400b98 <gemm_sve+0x28>
+  400be0:	add	x1, x1, x7
+  400be4:	add	x6, x6, x7
+  400be8:	add	x0, x8, #0x1
+  400bec:	cmp	x8, x5
+  400bf0:	b.eq	400bfc <gemm_sve+0x8c>  // b.none
+  400bf4:	mov	x8, x0
+  400bf8:	b	400b90 <gemm_sve+0x20>
+  400bfc:	ret
