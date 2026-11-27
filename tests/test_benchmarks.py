@@ -47,6 +47,7 @@ class SingleThreadGemmTests(unittest.TestCase):
 class ParallelGemmTests(unittest.TestCase):
     CASES = {
         "gemm_omp": ("GEMM OpenMP N={n} hilos={t}: OK", 8),
+        "gemm_omp_sve": ("GEMM OpenMP SVE (ruta nativa sin SVE) N={n} hilos={t}: OK", 16),
     }
 
     def test_valid_sizes_and_threads_produce_correct_result(self):

@@ -54,4 +54,57 @@ La compilación usa 2 procesos en paralelo (`JOBS=2`) para no agotar la RAM; se 
 
 ## Reproducción
 
-_Pendiente: construcción del contenedor y comandos para regenerar todos los CSV y gráficos._
+Todos los comandos se ejecutan desde la raíz del repositorio. `scripts/docker.sh`
+corre un comando dentro del contenedor con el repositorio en `/work` y deja los
+archivos a nombre del usuario actual (dentro del contenedor se puede omitir).
+
+### Pruebas
+
+    bash scripts/docker.sh python3 -m unittest discover -s tests
+
+Compilan los benchmarks para el host (`-DNATIVE`) y verifican el resultado de
+GEMM y la validación de argumentos; también prueban el modelo de costo, el plan
+de E6 y las tablas de E3 y E6. Las rutas SVE se validan en gem5 con `SMOKE=1`.
+
+### Experimentos
+
+| Exp. | Comando | Salida |
+|---|---|---|
+| E1 | `bash scripts/docker.sh bash scripts/run_e1.sh` | `results/e1/e1.csv` |
+| E2 | `bash scripts/docker.sh bash scripts/run_e2.sh` | `results/e2/e2.csv` |
+| E3 | `bash scripts/docker.sh bash scripts/run_e3.sh` | `results/e3/e3.csv`, `gemm_sve.dis` |
+| E4 | `bash scripts/docker.sh bash scripts/run_e4.sh` | `results/e4/e4.csv` |
+| E5 | `bash scripts/docker.sh bash scripts/run_e5.sh` | `results/e5/e5.csv`, `e5_states.csv` |
+| E6 | `bash scripts/docker.sh bash scripts/run_e6.sh` | `results/e6/e6.csv`, `e6_summary.md` |
+
+Gráficos (en `report/figures/`):
+
+    bash scripts/docker.sh python3 scripts/plot_results.py
+    bash scripts/docker.sh python3 scripts/plot_e5.py
+
+Opciones de E3 y E6 (variables de entorno):
+
+- `SMOKE=1`: validación rápida con N = 16 en `results/e3_smoke` o `results/e6_smoke`.
+- `JOBS=n`: simulaciones simultáneas (4 por defecto; cada una usa ~1 GB de RAM).
+- `FORCE=1`: repite corridas existentes. E6 reutiliza las corridas que ya pasaron
+  la verificación, así que se puede reanudar si se interrumpe.
+- E6: `SIZES="128 256"` y `FILTER='regex'` seleccionan tamaños y diseños, p. ej.
+  `SIZES=256 FILTER='c8_w4_vl256_mesi' bash scripts/run_e6.sh` (sensibilidad).
+
+### E6: modelo de costo y plan
+
+- `scripts/cost.py` es la única definición de `Costo = Nnúcleos × (Wissue/2 + VL/128)`,
+  del presupuesto (32) y de los rangos válidos.
+- `configs/e6.csv` lista los diseños (núcleos, ancho, VL, protocolo, justificación);
+  `python3 scripts/e6_plan.py configs/e6.csv` muestra su costo y rechaza los que
+  exceden el presupuesto.
+- Todos los diseños usan núcleos `ArmO3CPU` con Ruby (misma jerarquía de E5) y
+  `src/gemm_omp_sve.c` con un hilo por núcleo.
+
+### Benchmarks
+
+`src/gemm_common.h` concentra la lectura de argumentos, la ROI
+(`m5_reset_stats`/`m5_dump_stats`), la inicialización y verificación de GEMM y el
+reparto de filas con OpenMP; `src/gemm_kernels.h` contiene el núcleo SVE
+compartido por `gemm_sve.c` y `gemm_omp_sve.c`. Cada benchmark solo define su
+núcleo de cómputo. Las métricas se toman solo del bloque de la ROI de `stats.txt`.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generador automático de gráficos para E1, E2, E3 y E4 a partir de los CSV.
+"""Generador automático de gráficos para E1, E2, E3, E4 y E6 a partir de los CSV.
 
 Lee los CSV generados por scripts/parse_stats.py y produce figuras listas para
 el informe IEEE y la presentación de avance en report/figures/.
@@ -285,15 +285,58 @@ def plot_e3(csv_path: Path, out_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Bloque 5: Punto de entrada CLI
+# Bloque 5: Gráficos de E6 (Exploración bajo presupuesto)
+# ---------------------------------------------------------------------------
+def plot_e6(csv_path: Path, out_dir: Path, n: int = 128) -> None:
+    """Tiempo de GEMM por diseño y tiempo vs. costo con las fronteras de presupuesto."""
+    df = pd.read_csv(csv_path)
+    df = df[df["N"] == n].sort_values("time_us")
+    if df.empty:
+        print(f"[skip] e6.csv no tiene corridas con N = {n}.")
+        return
+
+    labels = [f"{r.cores}c·w{r.width}·VL{r.vl_bits}·{r.protocol.upper()}" for r in df.itertuples()]
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8))
+
+    ax0 = axes[0]
+    bars = ax0.barh(labels, df["time_us"], color=plt.cm.viridis(df["cost"] / 32.0))
+    ax0.invert_yaxis()
+    for bar, c in zip(bars, df["cost"]):
+        ax0.text(bar.get_width(), bar.get_y() + bar.get_height() / 2, f" costo {c:g}",
+                 va="center", fontsize=8)
+    ax0.set_xlabel(f"Tiempo de la ROI, GEMM N = {n} (µs)")
+    ax0.set_title("E6: Tiempo por diseño (menor es mejor)")
+
+    ax1 = axes[1]
+    for protocol, marker in (("mesi", "o"), ("moesi", "^")):
+        sub = df[df["protocol"] == protocol]
+        ax1.scatter(sub["cost"], sub["gflops"], marker=marker, s=50, label=protocol.upper())
+    for r, label in zip(df.itertuples(), labels):
+        ax1.annotate(label.rsplit("·", 1)[0], (r.cost, r.gflops), fontsize=7,
+                     xytext=(4, 3), textcoords="offset points")
+    for budget in (16, 32):
+        ax1.axvline(budget, linestyle="--", color="gray", alpha=0.6)
+    ax1.set_xlabel("Costo = núcleos × (ancho/2 + VL/128)")
+    ax1.set_ylabel("Rendimiento (GFLOP/s)")
+    ax1.set_title("E6: Rendimiento vs. costo (presupuestos 16 y 32)")
+    ax1.legend()
+
+    fig.tight_layout()
+    fig.savefig(out_dir / "e6_designs.png")
+    plt.close(fig)
+    print(f"[plot] E6 guardado en {out_dir}")
+
+
+# ---------------------------------------------------------------------------
+# Bloque 6: Punto de entrada CLI
 # ---------------------------------------------------------------------------
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Genera gráficos de E1, E2, E3 y E4 desde los CSV de results/."
+        description="Genera gráficos de E1, E2, E3, E4 y E6 desde los CSV de results/."
     )
     parser.add_argument(
         "--exp",
-        choices=["e1", "e2", "e3", "e4", "all"],
+        choices=["e1", "e2", "e3", "e4", "e6", "all"],
         default="all",
         help="Experimento a graficar (por defecto: all).",
     )
@@ -317,6 +360,7 @@ def main() -> int:
         "e2": (args.results_dir / "e2" / "e2.csv", plot_e2),
         "e3": (args.results_dir / "e3" / "e3.csv", plot_e3),
         "e4": (args.results_dir / "e4" / "e4.csv", plot_e4),
+        "e6": (args.results_dir / "e6" / "e6.csv", plot_e6),
     }
 
     selected = list(tasks.keys()) if args.exp == "all" else [args.exp]
