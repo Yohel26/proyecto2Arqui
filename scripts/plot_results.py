@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generador automático de gráficos para E1, E2 y E4 a partir de los CSV.
+"""Generador automático de gráficos para E1, E2, E3 y E4 a partir de los CSV.
 
 Lee los CSV generados por scripts/parse_stats.py y produce figuras listas para
 el informe IEEE y la presentación de avance en report/figures/.
@@ -232,15 +232,68 @@ def plot_e4(csv_path: Path, out_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Bloque 4: Punto de entrada CLI
+# Bloque 4: Gráficos de E3 (Vectorial: escalar vs. SVE, VL 128..1024)
+# ---------------------------------------------------------------------------
+def plot_e3(csv_path: Path, out_dir: Path) -> None:
+    """Speedup vs. VL contra el escalado ideal, y descomposición en instrucciones e IPC."""
+    df = pd.read_csv(csv_path)
+    sve = df[df["variant"] == "sve"].sort_values(["N", "vl_bits"])
+    vls = sorted(sve["vl_bits"].unique())
+
+    # Figura 1: speedup medido vs. escalado ideal desde VL = 128
+    fig, ax = plt.subplots(figsize=(7, 4.3))
+    for n, sub in sve.groupby("N"):
+        line, = ax.plot(sub["vl_bits"], sub["speedup"], marker="o", linewidth=2, label=f"N = {n}")
+        base = sub.iloc[0]
+        ideal = [base["speedup"] * vl / base["vl_bits"] for vl in sub["vl_bits"]]
+        ax.plot(sub["vl_bits"], ideal, linestyle="--", color=line.get_color(), alpha=0.6,
+                label=f"Ideal ∝ VL (N = {n})")
+    ax.set_xscale("log", base=2)
+    ax.set_xticks(vls)
+    ax.set_xticklabels([str(v) for v in vls])
+    ax.set_xlabel("Longitud vectorial SVE (bits)")
+    ax.set_ylabel("Speedup respecto a GEMM escalar (ciclos)")
+    ax.set_title("E3: Speedup de SVE vs. longitud vectorial (ArmO3CPU)")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(out_dir / "e3_speedup_vl.png")
+    plt.close(fig)
+
+    # Figura 2: speedup = reducción de instrucciones x razón de IPC
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.0))
+    for n, sub in sve.groupby("N"):
+        axes[0].plot(sub["vl_bits"], sub["inst_reduction"], marker="s", label=f"N = {n}")
+        axes[1].plot(sub["vl_bits"], sub["ipc_total"], marker="s", label=f"SVE N = {n}")
+    for n, sub in df[df["variant"] == "scalar"].groupby("N"):
+        axes[1].axhline(sub["ipc_total"].iloc[0], linestyle=":", color="gray")
+    for ax, ylabel, title in (
+        (axes[0], "Instrucciones escalar / SVE", "Reducción de instrucciones"),
+        (axes[1], "IPC", "IPC de la ROI (punteado: escalar)"),
+    ):
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(vls)
+        ax.set_xticklabels([str(v) for v in vls])
+        ax.set_xlabel("VL (bits)")
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend()
+    fig.suptitle("E3: De dónde viene la ganancia de SVE")
+    fig.tight_layout()
+    fig.savefig(out_dir / "e3_instructions_ipc.png")
+    plt.close(fig)
+    print(f"[plot] E3 guardado en {out_dir}")
+
+
+# ---------------------------------------------------------------------------
+# Bloque 5: Punto de entrada CLI
 # ---------------------------------------------------------------------------
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Genera gráficos de E1, E2 y E4 desde los CSV de results/."
+        description="Genera gráficos de E1, E2, E3 y E4 desde los CSV de results/."
     )
     parser.add_argument(
         "--exp",
-        choices=["e1", "e2", "e4", "all"],
+        choices=["e1", "e2", "e3", "e4", "all"],
         default="all",
         help="Experimento a graficar (por defecto: all).",
     )
@@ -262,6 +315,7 @@ def main() -> int:
     tasks = {
         "e1": (args.results_dir / "e1" / "e1.csv", plot_e1),
         "e2": (args.results_dir / "e2" / "e2.csv", plot_e2),
+        "e3": (args.results_dir / "e3" / "e3.csv", plot_e3),
         "e4": (args.results_dir / "e4" / "e4.csv", plot_e4),
     }
 
