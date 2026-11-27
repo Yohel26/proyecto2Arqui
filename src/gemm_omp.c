@@ -113,5 +113,14 @@ int main(int argc, char **argv)
     if (ok)
         printf("GEMM OpenMP N=%zu hilos=%d: OK\n", n, actual);
     free(a); free(b); free(c);
+#if !defined(NATIVE) && defined(GEM5_EXPLICIT_EXIT)
+    /* E5: avoid the TimingSimpleCPU exit_group assertion outside the ROI. */
+    fflush(stdout);
+    fflush(stderr);
+    if (ok)
+        m5_exit(0);
+    else
+        m5_fail(0, 1);
+#endif
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
